@@ -1,11 +1,12 @@
 interface FormattedResult {
-  Country: string;
-  Year: number;
-  Population: number;
+  [country: string]: {
+    value: number;
+    bulletSettings: string;
+  };
 }
 
 interface GroupedByYear {
-  [year: number]: FormattedResult[];
+  [year: number]: FormattedResult;
 }
 
 export type { FormattedResult, GroupedByYear };

@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
 import path from "path";
+import fs from "fs";
 import csv from "csv-parser";
-import { FormattedResult, GroupedByYear } from "@/interface";
+import { NextResponse } from "next/server";
+import { GroupedByYear } from "@/interface";
+import { countryToCode } from "@/util/countryToCode";
+// import iso from "iso-3166-1";
 
 async function GET() {
   const filePath = path.join(
@@ -12,7 +14,7 @@ async function GET() {
 
   const results: any[] = [];
 
-  const promise = new Promise<void>((resolve, reject) => {
+  const csvData = new Promise<void>((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(csv())
       .on("data", (data) => results.push(data))
@@ -20,26 +22,51 @@ async function GET() {
       .on("error", (error) => reject(error));
   });
 
-  await promise;
+  await csvData;
 
-  const formattedResults: FormattedResult[] = results.map((row) => ({
-    Country: row["Country name"],
-    Year: row["Year"],
-    Population: row["Population"],
-  }));
+  const byYear = results.reduce<GroupedByYear>((acc, current) => {
+    const year = current["Year"];
+    const country = current["Country name"];
+    const population = parseInt(current["Population"]);
 
-  const byYear = formattedResults.reduce<GroupedByYear>((acc, current) => {
-    const { Year, Country, Population } = current;
-    if (!acc[Year]) {
-      acc[Year] = [];
+    if (!acc[year]) {
+      acc[year] = {};
     }
-    acc[Year].push({
-      Country,
-      Population,
-      Year,
-    });
+
+    // Filter country
+    else if (
+      acc[year] &&
+      country !== "World" &&
+      country.indexOf("UN") == -1 &&
+      country.indexOf("countries") == -1 &&
+      country.indexOf("income") == -1 &&
+      country.indexOf("developed") == -1
+    ) {
+      const shortness = countryToCode[country as keyof typeof countryToCode];
+
+      if (!acc[year][country]) {
+        acc[year][country] = {
+          value: population,
+          bulletSettings: "",
+        };
+      }
+      acc[year][country].value = population;
+      acc[year][
+        country
+      ].bulletSettings = `https://public.flourish.studio/country-flags/svg/${shortness?.toLowerCase()}.svg`;
+    }
+
     return acc;
   }, {});
+
+  // Limit data to 12 countries per year
+  for (const year in byYear) {
+    const countries = Object.entries(byYear[year]);
+    countries.sort(([, popA], [, popB]) => popB.value - popA.value);
+    if (countries.length > 12) {
+      byYear[year] = Object.fromEntries(countries.slice(0, 12));
+    }
+  }
 
   return NextResponse.json({
     message: "Data retrieved successfully",

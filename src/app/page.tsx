@@ -1,5 +1,4 @@
 import { Mychart } from "@/conponents";
-import Image from "next/image";
 
 export default function Home() {
   return (
@@ -10,6 +9,9 @@ export default function Home() {
         </div>
         <div className="text-slate-400 text-xl font-bold">
           Click on the legend below to filter by continent
+        </div>
+        <div className="text-slate-900 pt-2">
+          Region Asia Europe Africa Oceania Americas
         </div>
         <div className="w-full">
           <Mychart />
