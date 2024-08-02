@@ -149,12 +149,12 @@ const BarChartRace = () => {
     series.columns.template.setAll({ cornerRadiusBR: 5, cornerRadiusTR: 5 });
 
     series.columns.template.adapters.add("fill", function (fill, target) {
-      const country: any = target.dataItem?.get("categoryY");
+      const country: any = (target.dataItem as any)?.get("categoryY");
       return getColorForCountry(country);
     });
 
     series.columns.template.adapters.add("stroke", function (stroke, target) {
-      const country: any = target.dataItem?.get("categoryY");
+      const country: any = (target.dataItem as any)?.get("categoryY");
       return getColorForCountry(country);
     });
 
