@@ -1,4 +1,4 @@
-import { Mychart } from "@/conponents";
+import { Mychart, RangLine, RegionLegend, StartStop } from "@/conponents";
 
 export default function Home() {
   return (
@@ -8,14 +8,12 @@ export default function Home() {
           Population growth per country, 1950 to 2021
         </div>
         <div className="text-slate-400 text-xl font-bold">
-          Click on the legend below to filter by continent
+          Click on the legend below to filter by continent 👇
         </div>
         <div className="text-slate-900 pt-2">
-          Region Asia Europe Africa Oceania Americas
+          <RegionLegend />
         </div>
-        <div className="w-full">
-          <Mychart />
-        </div>
+        <Mychart />
       </div>
     </main>
   );

@@ -3,17 +3,37 @@ import React, { useEffect, useRef, useState } from "react";
 import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
-import { GroupedByYear } from "@/interface";
+import { IGroupedByYear } from "@/interface";
 import { getData } from "@/services";
-// import iso from "iso-3166-1";
+import countryToContinent from "@/util/countryToContinent";
+import RangLine from "../rangeLine";
+import StartStop from "../startStop";
+
+// Define the regions and their corresponding colors
+const regions = [
+  { name: "Asia", color: "#5636D0" },
+  { name: "Europe", color: "#7B56E3" },
+  { name: "Africa", color: "#FF6F8E" },
+  { name: "Oceania", color: "#FF9E00" },
+  { name: "Americas", color: "#FFB85C" },
+];
+
+// Function to get the color for a country based on its continent
+const getColorForCountry = (country: any) => {
+  const continent = countryToContinent[country];
+  const region = regions.find((region) => region.name === continent);
+  return region ? am5.color(region.color) : am5.color("#000000"); // Default color if not found
+};
 
 const BarChartRace = () => {
-  const [allData, setAllData] = useState<GroupedByYear>({});
+  const [allData, setAllData] = useState<IGroupedByYear>({});
+  const [yearData, setYearData] = useState<number>(1950);
+  const [totalValue, setTotalValue] = useState<number>(0);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const factData = async () => {
     try {
-      const dataChart: GroupedByYear = await getData();
+      const dataChart: IGroupedByYear = await getData();
       if (!dataChart || Object.keys(dataChart).length === 0) {
         console.error("No data fetched");
         return;
@@ -69,7 +89,6 @@ const BarChartRace = () => {
         maxDeviation: 0,
         min: 0,
         strictMinMax: true,
-
         extraMax: 0.1,
         renderer: am5xy.AxisRendererX.new(root, {}),
       })
@@ -87,7 +106,7 @@ const BarChartRace = () => {
       })
     );
 
-    var circleTemplate = am5.Template.new({});
+    // var circleTemplate = am5.Template.new({});
 
     series.bullets.push(function (root, series, dataItem) {
       var bulletContainer = am5.Container.new(root, {});
@@ -96,8 +115,8 @@ const BarChartRace = () => {
           root,
           {
             radius: 15,
-          },
-          circleTemplate
+          }
+          // circleTemplate
         )
       );
 
@@ -105,7 +124,6 @@ const BarChartRace = () => {
         am5.Circle.new(root, { radius: 15 })
       );
 
-      // only containers can be masked, so we add image to another container
       var imageContainer = bulletContainer.children.push(
         am5.Container.new(root, {
           mask: maskCircle,
@@ -124,7 +142,6 @@ const BarChartRace = () => {
 
       return am5.Bullet.new(root, {
         locationX: 1,
-
         sprite: bulletContainer,
       });
     });
@@ -132,11 +149,13 @@ const BarChartRace = () => {
     series.columns.template.setAll({ cornerRadiusBR: 5, cornerRadiusTR: 5 });
 
     series.columns.template.adapters.add("fill", function (fill, target) {
-      return chart.get("colors")?.getIndex(series.columns.indexOf(target));
+      const country: any = target.dataItem?.get("categoryY");
+      return getColorForCountry(country);
     });
 
     series.columns.template.adapters.add("stroke", function (stroke, target) {
-      return chart.get("colors")?.getIndex(series.columns.indexOf(target));
+      const country: any = target.dataItem?.get("categoryY");
+      return getColorForCountry(country);
     });
 
     series.bullets.push(function () {
@@ -155,8 +174,20 @@ const BarChartRace = () => {
     const label = chart.plotContainer.children.push(
       am5.Label.new(root, {
         text: String(year),
-        fontSize: "8em",
-        opacity: 0.2,
+        fontSize: "4em",
+        opacity: 0.5,
+        x: am5.p100,
+        y: am5.p50,
+        centerY: am5.p0,
+        centerX: am5.p100,
+      })
+    );
+
+    const totalLabel = chart.plotContainer.children.push(
+      am5.Label.new(root, {
+        text: `Total ${totalValue}`,
+        fontSize: "4em",
+        opacity: 0.5,
         x: am5.p100,
         y: am5.p100,
         centerY: am5.p100,
@@ -173,31 +204,24 @@ const BarChartRace = () => {
       }
     }
 
-    // Axis sorting
     function sortCategoryAxis() {
-      // sort by value
       series.dataItems.sort(function (x, y) {
-        return y.get("valueX") - x.get("valueX"); // descending
-        //return x.get("valueX") - y.get("valueX"); // ascending
+        const xValue = x.get("valueX") || 0;
+        const yValue = y.get("valueX") || 0;
+        return yValue - xValue;
       });
 
-      // go through each axis item
       am5.array.each(yAxis.dataItems, function (dataItem) {
-        // get corresponding series item
-        var seriesDataItem = getSeriesItem(dataItem.get("category"));
+        const seriesDataItem = getSeriesItem(dataItem.get("category"));
 
         if (seriesDataItem) {
-          // get index of series data item
-          var index = series.dataItems.indexOf(seriesDataItem);
-          // calculate delta position
-          var deltaPosition =
+          const index = series.dataItems.indexOf(seriesDataItem);
+          const deltaPosition =
             (index - dataItem.get("index", 0)) / series.dataItems.length;
-          // set index to be the same as series data item index
+
           if (dataItem.get("index") != index) {
             dataItem.set("index", index);
-            // set deltaPosition instanlty
             dataItem.set("deltaPosition", -deltaPosition);
-            // animate delta position to 0
             dataItem.animate({
               key: "deltaPosition",
               to: 0,
@@ -207,10 +231,11 @@ const BarChartRace = () => {
           }
         }
       });
-      // sort axis items by index.
-      // This changes the order instantly, but as deltaPosition is set, they keep in the same places and then animate to true positions.
+
       yAxis.dataItems.sort(function (x, y) {
-        return x.get("index") - y.get("index");
+        const xIndex = x.get("index") || 0;
+        const yIndex = y.get("index") || 0;
+        return xIndex - yIndex;
       });
     }
 
@@ -222,6 +247,8 @@ const BarChartRace = () => {
         clearInterval(sortInterval);
       }
 
+      setYearData(year);
+
       updateData();
     }, stepDuration);
 
@@ -232,33 +259,35 @@ const BarChartRace = () => {
     function setInitialData() {
       const d = allData[year];
 
-      // Ensure d is defined
       if (!d) {
         console.error(`No data for year ${year}`);
         return;
       }
 
       for (const n in d) {
-        series.data.push({
-          country: n,
-          value: d[n].value,
-          bulletSettings: {
-            src: d[n].bulletSettings,
-          },
-        });
-        yAxis.data.push({ country: n });
+        if (n !== "World") {
+          series.data.push({
+            country: n,
+            value: d[n].value,
+            bulletSettings: {
+              src: d[n].bulletSettings,
+            },
+          });
+          yAxis.data.push({ country: n });
+        }
       }
     }
 
     function updateData() {
       let itemsWithNonZero = 0;
+      let total = 0;
 
       if (allData[year]) {
         label.set("text", year.toString());
 
         am5.array.each(series.dataItems, (dataItem) => {
           const category = dataItem.get("categoryY");
-          if (category) {
+          if (category && category !== "World") {
             const value = allData[year][category]?.value;
             const image = allData[year][category]?.bulletSettings;
             if (value > 0) {
@@ -280,6 +309,13 @@ const BarChartRace = () => {
             });
           }
         });
+        if (allData[year]["World"]) {
+          total = allData[year]["World"].value; // get total value 'World'
+        }
+
+        const formattedNumber = new Intl.NumberFormat().format(total);
+        setTotalValue(total);
+        totalLabel.set("text", `Total: ${formattedNumber}`);
 
         yAxis.zoom(0, itemsWithNonZero / yAxis.dataItems.length);
       } else {
@@ -299,14 +335,36 @@ const BarChartRace = () => {
     return () => {
       root.dispose();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allData]);
 
   return (
-    <div
-      id="myChart"
-      ref={chartRef}
-      style={{ width: "100%", height: "500px" }}
-    ></div>
+    <>
+      <div className="w-full">
+        <div
+          id="myChart"
+          ref={chartRef}
+          style={{ width: "100%", height: "500px" }}
+        />
+      </div>
+      <div
+        className="flex w-full"
+        style={{
+          padding: "8px",
+        }}
+      >
+        <div className="p-10">
+          <StartStop onStart={() => {}} onStop={() => {}} />
+        </div>
+        <div
+          style={{
+            paddingLeft: "25px",
+          }}
+        >
+          <RangLine val={yearData} />
+        </div>
+      </div>
+    </>
   );
 };
 

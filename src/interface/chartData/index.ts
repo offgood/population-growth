@@ -1,12 +1,21 @@
-interface FormattedResult {
+interface IFormattedResult {
   [country: string]: {
     value: number;
     bulletSettings: string;
   };
 }
 
-interface GroupedByYear {
-  [year: number]: FormattedResult;
+interface IGroupedByYear {
+  [year: number]: IFormattedResult;
 }
 
-export type { FormattedResult, GroupedByYear };
+interface IRangeLineProps {
+  val: number;
+}
+
+interface IStartStop {
+  onStop: () => void;
+  onStart: () => void;
+}
+
+export type { IFormattedResult, IGroupedByYear, IRangeLineProps, IStartStop };

@@ -1,3 +1,8 @@
-import { FormattedResult, GroupedByYear } from "@/interface/chartData";
+import {
+  IFormattedResult,
+  IGroupedByYear,
+  IRangeLineProps,
+  IStartStop,
+} from "@/interface/chartData";
 
-export type { FormattedResult, GroupedByYear };
+export type { IFormattedResult, IGroupedByYear, IRangeLineProps, IStartStop };
