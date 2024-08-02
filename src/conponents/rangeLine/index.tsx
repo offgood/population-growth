@@ -1,9 +1,9 @@
 "use client";
-import { RangeLineProps } from "@/interface";
+import { IRangeLineProps } from "@/interface";
 import style from "@/styles/rangLine.module.scss";
 import React, { useEffect, useState } from "react";
 
-const RangeLine: React.FC<RangeLineProps> = ({ val }) => {
+const RangeLine: React.FC<IRangeLineProps> = ({ val }) => {
   const [value, setValue] = useState<number>(val);
 
   useEffect(() => {
